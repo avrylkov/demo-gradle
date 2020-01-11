@@ -1,0 +1,71 @@
+plugins {
+	id 'org.springframework.boot' version '2.2.2.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+	id 'java'
+	id 'maven'
+	id 'maven-publish'
+}
+
+group = 'com.example.home'
+version = '0.0.1-SNAPSHOT'
+//version = '0.0.1'
+sourceCompatibility = '1.8'
+
+repositories {
+	//mavenCentral()
+	maven {
+		url "${nexusUrl}/repository/maven-public/"
+	}
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+uploadArchives {
+	repositories {
+		mavenDeployer {
+			repository(url: "${nexusUrl}/repository/maven-releases") {
+				authentication(userName: nexusUsername, password: nexusPassword)
+			}
+			snapshotRepository(url: "${nexusUrl}/repository/maven-snapshots") {
+				authentication(userName: nexusUsername, password: nexusPassword)
+			}
+		}
+	}
+}
+// Zip
+task assembleArtifact(type: Zip, group: 'config-zip') {
+	archiveName 'config.zip'
+	destinationDir file("$buildDir/libs/")
+	from "src/main/config"
+	description "Assemble archive $archiveFileName into ${relativePath(destinationDirectory)}"
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifact source: assembleArtifact, extension: 'zip'
+		}
+	}
+	repositories {
+		maven {
+			credentials {
+				username nexus2Username
+				password nexus2Password
+			}
+			url nexus2Url
+		}
+	}
+}
+
+assemble.dependsOn assembleArtifact
+build.dependsOn assemble
+publish.dependsOn build
+
+test {
+	useJUnitPlatform()
+}
